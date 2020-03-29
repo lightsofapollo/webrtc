@@ -139,6 +139,10 @@ func (r *RTPSender) ReadRTCP() ([]rtcp.Packet, error) {
 	return rtcp.Unmarshal(b[:i])
 }
 
+func (r *RTPSender) WriteRTP(header *rtp.Header, payload []byte) (int, error) {
+	return r.sendRTP(header, payload)
+}
+
 // sendRTP should only be called by a track, this only exists so we can keep state in one place
 func (r *RTPSender) sendRTP(header *rtp.Header, payload []byte) (int, error) {
 	select {

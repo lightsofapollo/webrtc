@@ -205,6 +205,10 @@ func (t *DTLSTransport) startSRTP() error {
 	return nil
 }
 
+func (t *DTLSTransport) GetSRTPSession() (*srtp.SessionSRTP, error) {
+	return t.getSRTPSession()
+}
+
 func (t *DTLSTransport) getSRTPSession() (*srtp.SessionSRTP, error) {
 	t.lock.RLock()
 	if t.srtpSession != nil {
@@ -218,6 +222,10 @@ func (t *DTLSTransport) getSRTPSession() (*srtp.SessionSRTP, error) {
 	}
 
 	return t.srtpSession, nil
+}
+
+func (t *DTLSTransport) GetSRTCPSession() (*srtp.SessionSRTCP, error) {
+	return t.getSRTCPSession()
 }
 
 func (t *DTLSTransport) getSRTCPSession() (*srtp.SessionSRTCP, error) {

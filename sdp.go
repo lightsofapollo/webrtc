@@ -209,6 +209,17 @@ func addTransceiverSDP(d *sdp.SessionDescription, isPlanB bool, mediaEngine *Med
 	codecs := mediaEngine.GetCodecsByKind(t.kind)
 	for _, codec := range codecs {
 		media.WithCodec(codec.PayloadType, codec.Name, codec.ClockRate, codec.Channels, codec.SDPFmtpLine)
+		if codec.AdditionalFormats != nil {
+			media.MediaName.Formats = append(media.MediaName.Formats, codec.AdditionalFormats...)
+		}
+
+		if codec.RTPCodecCapability.SDPAttributes != nil {
+			for _, attr := range codec.RTPCodecCapability.SDPAttributes {
+				for key, value := range attr {
+					media.WithValueAttribute(key, value)
+				}
+			}
+		}
 
 		for _, feedback := range codec.RTPCodecCapability.RTCPFeedback {
 			media.WithValueAttribute("rtcp-fb", fmt.Sprintf("%d %s %s", codec.PayloadType, feedback.Type, feedback.Parameter))
@@ -216,7 +227,9 @@ func addTransceiverSDP(d *sdp.SessionDescription, isPlanB bool, mediaEngine *Med
 				media.WithTransportCCExtMap()
 			}
 		}
+
 	}
+
 	if len(codecs) == 0 {
 		// Explicitly reject track if we don't have the codec
 		d.WithMedia(&sdp.MediaDescription{
