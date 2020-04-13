@@ -4,6 +4,7 @@ package webrtc
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -207,6 +208,7 @@ func addTransceiverSDP(d *sdp.SessionDescription, isPlanB bool, mediaEngine *Med
 		WithPropertyAttribute(sdp.AttrKeyRTCPRsize)
 
 	codecs := mediaEngine.GetCodecsByKind(t.kind)
+	log.Printf("%+v | %v <<< trans call", transceivers, codecs)
 	for _, codec := range codecs {
 		media.WithCodec(codec.PayloadType, codec.Name, codec.ClockRate, codec.Channels, codec.SDPFmtpLine)
 		if codec.AdditionalFormats != nil {
@@ -228,6 +230,25 @@ func addTransceiverSDP(d *sdp.SessionDescription, isPlanB bool, mediaEngine *Med
 			}
 		}
 
+		for _, trans := range transceivers {
+			bwType, bw := trans.GetBandwidth()
+			if bwType != nil {
+				media.Bandwidth = append(media.Bandwidth, sdp.Bandwidth{
+					Experimental: false,
+					Type:         *bwType,
+					Bandwidth:    uint64(bw),
+				})
+			}
+
+			if trans.GetSdpAttrs() == nil {
+				continue
+			}
+			for _, attrPair := range trans.GetSdpAttrs() {
+				for key, value := range attrPair {
+					media.WithValueAttribute(key, value)
+				}
+			}
+		}
 	}
 
 	if len(codecs) == 0 {

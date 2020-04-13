@@ -4,17 +4,52 @@ package webrtc
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 )
 
 // RTPTransceiver represents a combination of an RTPSender and an RTPReceiver that share a common mid.
 type RTPTransceiver struct {
-	sender    atomic.Value // *RTPSender
-	receiver  atomic.Value // *RTPReceiver
-	direction atomic.Value // RTPTransceiverDirection
+	mu sync.RWMutex
+
+	sender        atomic.Value // *RTPSender
+	receiver      atomic.Value // *RTPReceiver
+	direction     atomic.Value // RTPTransceiverDirection
+	sdpAttrs      []map[string]string
+	bandwidthType *string
+	bandwidth     int
 
 	stopped bool
 	kind    RTPCodecType
+}
+
+// SetBandwidth ...
+func (t *RTPTransceiver) SetBandwidth(kind string, value int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.bandwidthType = &kind
+	t.bandwidth = value
+}
+
+// GetBandwidth ...
+func (t *RTPTransceiver) GetBandwidth() (*string, int) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.bandwidthType, t.bandwidth
+}
+
+// SetSdpAttrs ...
+func (t *RTPTransceiver) SetSdpAttrs(attrs []map[string]string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.sdpAttrs = attrs
+}
+
+// GetSdpAttrs ...
+func (t *RTPTransceiver) GetSdpAttrs() []map[string]string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.sdpAttrs
 }
 
 // Sender returns the RTPTransceiver's RTPSender if it has one
