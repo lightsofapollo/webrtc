@@ -4,7 +4,6 @@ package webrtc
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -208,7 +207,6 @@ func addTransceiverSDP(d *sdp.SessionDescription, isPlanB bool, mediaEngine *Med
 		WithPropertyAttribute(sdp.AttrKeyRTCPRsize)
 
 	codecs := mediaEngine.GetCodecsByKind(t.kind)
-	log.Printf("%+v | %v <<< trans call", transceivers, codecs)
 	for _, codec := range codecs {
 		media.WithCodec(codec.PayloadType, codec.Name, codec.ClockRate, codec.Channels, codec.SDPFmtpLine)
 		if codec.AdditionalFormats != nil {
@@ -251,7 +249,11 @@ func addTransceiverSDP(d *sdp.SessionDescription, isPlanB bool, mediaEngine *Med
 		}
 	}
 
-	if len(codecs) == 0 {
+	for _, codec := range t.GetCodecs() {
+		codec.UpdateMedia(media)
+	}
+
+	if len(codecs) == 0 && len(t.GetCodecs()) == 0 {
 		// Explicitly reject track if we don't have the codec
 		d.WithMedia(&sdp.MediaDescription{
 			MediaName: sdp.MediaName{
@@ -268,6 +270,9 @@ func addTransceiverSDP(d *sdp.SessionDescription, isPlanB bool, mediaEngine *Med
 		if mt.Sender() != nil && mt.Sender().track != nil {
 			track := mt.Sender().track
 			media = media.WithMediaSource(track.SSRC(), track.Label() /* cname */, track.Label() /* streamLabel */, track.ID())
+			for _, codec := range mt.codecs {
+				codec.UpdateMediaTrack(track, media)
+			}
 			if !isPlanB {
 				media = media.WithPropertyAttribute("msid:" + track.Label() + " " + track.ID())
 				break
@@ -278,6 +283,7 @@ func addTransceiverSDP(d *sdp.SessionDescription, isPlanB bool, mediaEngine *Med
 	media = media.WithPropertyAttribute(t.Direction().String())
 
 	addCandidatesToMediaDescriptions(candidates, media, iceGatheringState)
+
 	d.WithMedia(media)
 
 	return true, nil

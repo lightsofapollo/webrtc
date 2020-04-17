@@ -6,12 +6,21 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+
+	"github.com/pion/sdp/v2"
 )
+
+// RTPTransceiverCodec ...
+type RTPTransceiverCodec interface {
+	UpdateMediaTrack(*Track, *sdp.MediaDescription)
+	UpdateMedia(*sdp.MediaDescription)
+}
 
 // RTPTransceiver represents a combination of an RTPSender and an RTPReceiver that share a common mid.
 type RTPTransceiver struct {
 	mu sync.RWMutex
 
+	codecs        []RTPTransceiverCodec
 	sender        atomic.Value // *RTPSender
 	receiver      atomic.Value // *RTPReceiver
 	direction     atomic.Value // RTPTransceiverDirection
@@ -21,6 +30,20 @@ type RTPTransceiver struct {
 
 	stopped bool
 	kind    RTPCodecType
+}
+
+// SetCodecs for transciever to use.
+func (t *RTPTransceiver) SetCodecs(codecs []RTPTransceiverCodec) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.codecs = codecs
+}
+
+// GetCodecs ...
+func (t *RTPTransceiver) GetCodecs() []RTPTransceiverCodec {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.codecs
 }
 
 // SetBandwidth ...

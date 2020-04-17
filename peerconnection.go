@@ -58,6 +58,8 @@ type PeerConnection struct {
 	onConnectionStateChangeHandler    func(PeerConnectionState)
 	onTrackHandler                    func(*Track, *RTPReceiver)
 	onDataChannelHandler              func(*DataChannel)
+	// non standard
+	onGenerateSDP func(*sdp.SessionDescription)
 
 	iceGatherer   *ICEGatherer
 	iceTransport  *ICETransport
@@ -211,6 +213,13 @@ func (pc *PeerConnection) initConfiguration(configuration Configuration) error {
 	}
 
 	return nil
+}
+
+// OnGenerateSDP ...
+func (pc *PeerConnection) OnGenerateSDP(f func(*sdp.SessionDescription)) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	pc.onGenerateSDP = f
 }
 
 // OnSignalingStateChange sets an event handler which is invoked when the
@@ -1664,6 +1673,9 @@ func (pc *PeerConnection) generateUnmatchedSDP(useIdentity bool) (*sdp.SessionDe
 	if err := addFingerprints(d, pc.configuration.Certificates[0]); err != nil {
 		return nil, err
 	}
+	if pc.onGenerateSDP != nil {
+		pc.onGenerateSDP(d)
+	}
 
 	iceParams, err := pc.iceGatherer.GetLocalParameters()
 	if err != nil {
@@ -1714,6 +1726,9 @@ func (pc *PeerConnection) generateMatchedSDP(useIdentity bool, includeUnmatched 
 	d := sdp.NewJSEPSessionDescription(useIdentity)
 	if err := addFingerprints(d, pc.configuration.Certificates[0]); err != nil {
 		return nil, err
+	}
+	if pc.onGenerateSDP != nil {
+		pc.onGenerateSDP(d)
 	}
 
 	iceParams, err := pc.iceGatherer.GetLocalParameters()
